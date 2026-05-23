@@ -1,4 +1,4 @@
-= repeating_todo_tasks
+= Repeating To-Do Tasks
 
 A new Flutter project.
 
