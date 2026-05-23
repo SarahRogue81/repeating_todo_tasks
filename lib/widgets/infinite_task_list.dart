@@ -222,49 +222,17 @@ class _InfiniteTaskListState extends State<InfiniteTaskList> {
               itemBuilder: (context, taskIndex) {
                 final occurrence = dayTasks[taskIndex];
                 final task = occurrence.task;
-                final cleanDue = RepeatingTask.stripTime(task.currentDueDate);
-                
-                // Allow ticking off ONLY the current active due date
-                // Future planned dates in the scroll list are previews only
-                final isCurrentActiveOccurrence = occurrence.dueDate.isAtSameMomentAs(cleanDue);
 
-                return Stack(
-                  children: [
-                    TaskCard(
-                      task: task,
-                      onComplete: () {
-                        // Triggers state completion
-                        widget.onComplete(task);
-                      },
-                      onDelete: () {
-                        widget.onDelete(task);
-                      },
-                    ),
-                    
-                    // Display preview badge if this is a future occurrence preview
-                    if (!isCurrentActiveOccurrence)
-                      Positioned(
-                        right: 16,
-                        top: 16,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.accentNeonPurple.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppTheme.accentNeonPurple.withValues(alpha: 0.3)),
-                          ),
-                          child: const Text(
-                            'PREVIEW',
-                            style: TextStyle(
-                              color: AppTheme.accentNeonPurple,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
+                return TaskCard(
+                  task: task,
+                  occurrenceDueDate: occurrence.dueDate,
+                  onComplete: () {
+                    // Triggers state completion
+                    widget.onComplete(task);
+                  },
+                  onDelete: () {
+                    widget.onDelete(task);
+                  },
                 );
               },
             ),

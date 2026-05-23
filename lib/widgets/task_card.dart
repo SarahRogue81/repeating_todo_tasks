@@ -6,12 +6,14 @@ import '../theme/app_theme.dart';
 
 class TaskCard extends StatelessWidget {
   final RepeatingTask task;
+  final DateTime? occurrenceDueDate;
   final VoidCallback onComplete;
   final VoidCallback onDelete;
 
   const TaskCard({
     super.key,
     required this.task,
+    this.occurrenceDueDate,
     required this.onComplete,
     required this.onDelete,
   });
@@ -19,15 +21,20 @@ class TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final cleanDue = RepeatingTask.stripTime(task.currentDueDate);
+    final cleanDue = RepeatingTask.stripTime(occurrenceDueDate ?? task.currentDueDate);
     final cleanToday = RepeatingTask.stripTime(now);
 
-    final isOverdue = cleanDue.isBefore(cleanToday);
-    final isDueToday = cleanDue.isAtSameMomentAs(cleanToday);
+    final isPreview = occurrenceDueDate != null &&
+        !RepeatingTask.stripTime(occurrenceDueDate!).isAtSameMomentAs(RepeatingTask.stripTime(task.currentDueDate));
+
+    final isOverdue = !isPreview && cleanDue.isBefore(cleanToday);
+    final isDueToday = !isPreview && cleanDue.isAtSameMomentAs(cleanToday);
 
     // Format current due date string
     String dueText = '';
-    if (isDueToday) {
+    if (isPreview) {
+      dueText = '${cleanDue.month}/${cleanDue.day}/${cleanDue.year} (${RepeatingTask.getWeekdayName(cleanDue.weekday)})';
+    } else if (isDueToday) {
       dueText = 'Today (${RepeatingTask.getWeekdayName(cleanDue.weekday)})';
     } else if (isOverdue) {
       dueText = 'Overdue (${RepeatingTask.getWeekdayName(cleanDue.weekday)})';
@@ -83,36 +90,50 @@ class TaskCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isOverdue
-                          ? AppTheme.accentNeonOrange.withValues(alpha: 0.15)
-                          : isDueToday
-                              ? AppTheme.primaryTeal.withValues(alpha: 0.15)
-                              : Colors.white.withValues(alpha: 0.05),
+                      color: isPreview
+                          ? AppTheme.accentNeonPurple.withValues(alpha: 0.15)
+                          : isOverdue
+                              ? AppTheme.accentNeonOrange.withValues(alpha: 0.15)
+                              : isDueToday
+                                  ? AppTheme.primaryTeal.withValues(alpha: 0.15)
+                                  : Colors.white.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(100),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isOverdue ? Icons.warning_rounded : Icons.schedule_rounded,
+                          isPreview
+                              ? Icons.next_plan_rounded
+                              : isOverdue
+                                  ? Icons.warning_rounded
+                                  : Icons.schedule_rounded,
                           size: 14,
-                          color: isOverdue
-                              ? AppTheme.accentNeonOrange
-                              : isDueToday
-                                  ? AppTheme.primaryTeal
-                                  : Colors.white60,
+                          color: isPreview
+                              ? AppTheme.accentNeonPurple
+                              : isOverdue
+                                  ? AppTheme.accentNeonOrange
+                                  : isDueToday
+                                      ? AppTheme.primaryTeal
+                                      : Colors.white60,
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          isOverdue ? 'Overdue' : 'Active',
+                          isPreview
+                              ? 'Preview'
+                              : isOverdue
+                                  ? 'Overdue'
+                                  : 'Active',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: isOverdue
-                                ? AppTheme.accentNeonOrange
-                                : isDueToday
-                                    ? AppTheme.primaryTeal
-                                    : Colors.white70,
+                            color: isPreview
+                                ? AppTheme.accentNeonPurple
+                                : isOverdue
+                                    ? AppTheme.accentNeonOrange
+                                    : isDueToday
+                                        ? AppTheme.primaryTeal
+                                        : Colors.white70,
                           ),
                         ),
                       ],
@@ -120,15 +141,16 @@ class TaskCard extends StatelessWidget {
                   ),
                   
                   // Delete Button
-                  IconButton(
-                    icon: Icon(Icons.delete_outline_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20),
-                    onPressed: () {
-                      HapticFeedback.mediumImpact();
-                      onDelete();
-                    },
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
+                  if (!isPreview)
+                    IconButton(
+                      icon: Icon(Icons.delete_outline_rounded, color: Colors.white.withValues(alpha: 0.3), size: 20),
+                      onPressed: () {
+                        HapticFeedback.mediumImpact();
+                        onDelete();
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -202,35 +224,37 @@ class TaskCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  if (!isPreview) ...[
+                    const SizedBox(width: 12),
 
-                  // Beautiful Complete Button
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      onComplete();
-                    },
-                    child: Container(
-                      height: 46,
-                      width: 46,
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.primaryGradient,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primaryTeal.withValues(alpha: 0.3),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.check_rounded,
-                        color: Colors.white,
-                        size: 24,
+                    // Beautiful Complete Button
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        onComplete();
+                      },
+                      child: Container(
+                        height: 46,
+                        width: 46,
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.primaryGradient,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primaryTeal.withValues(alpha: 0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.check_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ],
